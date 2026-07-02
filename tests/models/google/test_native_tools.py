@@ -209,6 +209,35 @@ def test_file_search_tool_response_uses_grounding_metadata_when_response_is_empt
     assert text == TextPart(content='Paris is the capital of France.')
 
 
+def test_file_search_tool_response_stays_empty_without_grounding_contexts():
+    response = _process_response_from_parts(
+        parts=[
+            Part.model_validate({'tool_call': {'id': 'file_search_call', 'tool_type': 'FILE_SEARCH', 'args': {}}}),
+            Part.model_validate({'tool_response': {'id': 'file_search_call', 'tool_type': 'FILE_SEARCH'}}),
+        ],
+        grounding_metadata=None,
+        model_name='gemini-3.5-flash',
+        provider_name='google-gla',
+        provider_url='https://generativelanguage.googleapis.com/',
+        usage=RequestUsage(),
+        provider_response_id='response-id',
+    )
+
+    file_search_call, file_search_return = response.parts
+
+    assert file_search_call == NativeToolCallPart(
+        tool_name='file_search',
+        args={},
+        tool_call_id='file_search_call',
+        provider_name='google-gla',
+    )
+    assert isinstance(file_search_return, NativeToolReturnPart)
+    assert file_search_return.tool_name == 'file_search'
+    assert file_search_return.tool_call_id == 'file_search_call'
+    assert file_search_return.provider_name == 'google-gla'
+    assert file_search_return.content is None
+
+
 @pytest.mark.parametrize('supports_tool_combination', [False, True])
 def test_content_model_response_pre_gemini_3_preserves_code_execution(supports_tool_combination: bool):
     response = ModelResponse(
